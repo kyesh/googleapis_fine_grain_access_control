@@ -1,4 +1,4 @@
-import { accessRules } from '@/db/schema';
+import { users, accessRules } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
@@ -11,26 +11,20 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  // Once the real DB is hooked up with credentials, this fetch will work dynamically:
-  // const userRules = await db.select().from(accessRules).where(eq(accessRules.userId, user.id));
-  
-  // For UI development, a mock state array mirroring the DB schema
-  const userRules = [
-    {
-      id: "rule-123",
-      ruleName: "Block Project X",
-      service: "gmail",
-      actionType: "read_blacklist",
-      regexPattern: "CONFIDENTIAL_PROJECT_X"
-    },
-    {
-      id: "rule-456",
-      ruleName: "Allow Core Domain",
-      service: "gmail",
-      actionType: "send_whitelist",
-      regexPattern: "*@trusted-domain.com"
-    }
-  ];
+  // Ensure user exists in our DB, since we aren't using Clerk webhooks yet
+  let dbUser = await db.select().from(users).where(eq(users.clerkUserId, user.id)).limit(1).then(res => res[0]);
+
+  if (!dbUser) {
+    const rawKeys = await db.insert(users).values({
+      clerkUserId: user.id,
+      email: user.emailAddresses[0]?.emailAddress ?? 'unknown',
+      proxyKey: `sk_proxy_${crypto.randomUUID().replace(/-/g, '')}`,
+    }).returning();
+    dbUser = rawKeys[0];
+  }
+
+  // Fetch real rules
+  const userRules = await db.select().from(accessRules).where(eq(accessRules.userId, dbUser.id));
 
   return (
     <div className="py-10">
@@ -49,10 +43,10 @@ export default async function DashboardPage() {
               <div className="bg-slate-50 border border-slate-200 rounded-md p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm text-slate-500">API Key</p>
-                  <code className="text-slate-900 font-mono">sk_test_***************************</code>
+                  <code className="text-slate-900 font-mono">{dbUser.proxyKey}</code>
                 </div>
                 <button className="bg-white border inset-ring inset-ring-gray-300 text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-50 text-gray-700">
-                  Manage Keys in WorkOS
+                  Roll Key (Coming Soon)
                 </button>
               </div>
               <p className="mt-3 text-sm text-gray-500">
@@ -115,6 +109,13 @@ export default async function DashboardPage() {
                           </td>
                         </tr>
                       ))}
+                      {userRules.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
+                            You have no active proxy rules. Default access to all Google Scopes is DENIED.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
