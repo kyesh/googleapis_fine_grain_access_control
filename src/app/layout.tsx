@@ -1,9 +1,9 @@
 import {
   ClerkProvider,
   SignInButton,
+  Show,
   UserButton
 } from '@clerk/nextjs';
-import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -16,13 +16,11 @@ export const metadata: Metadata = {
   description: 'Fine-grained access control for AI Agents using Google APIs.',
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
-
   return (
     <html lang="en" className="h-full bg-slate-50">
       <body className={`${inter.className} h-full`}>
@@ -37,7 +35,7 @@ export default async function RootLayout({
                         SecureAgent
                       </Link>
                     </div>
-                    {userId && (
+                    <Show when="signed-in">
                       <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                         <Link
                           href="/dashboard"
@@ -46,16 +44,17 @@ export default async function RootLayout({
                           Dashboard
                         </Link>
                       </div>
-                    )}
+                    </Show>
                   </div>
                   <div className="flex items-center">
-                    {!userId ? (
+                    <Show when="signed-out">
                       <SignInButton mode="modal">
                         <button className="text-sm font-medium text-gray-500 hover:text-gray-900">Sign In</button>
                       </SignInButton>
-                    ) : (
+                    </Show>
+                    <Show when="signed-in">
                       <UserButton />
-                    )}
+                    </Show>
                   </div>
                 </div>
               </div>

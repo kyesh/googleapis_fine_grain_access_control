@@ -1,4 +1,4 @@
-import { SignInButton, SignUpButton } from '@clerk/nextjs';
+import { SignInButton, SignUpButton, Show } from '@clerk/nextjs';
 import Link from 'next/link';
 
 export default async function LandingPage() {
@@ -14,16 +14,26 @@ export default async function LandingPage() {
         </p>
         
         <div className="flex gap-4 justify-center pt-8">
-          <SignUpButton mode="modal">
-            <button className="rounded-full bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all">
-              Get Started
-            </button>
-          </SignUpButton>
-          <SignInButton mode="modal">
-            <button className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
-              Sign In
-            </button>
-          </SignInButton>
+          <Show when="signed-out">
+            <SignUpButton mode="modal">
+              <button className="rounded-full bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all">
+                Get Started
+              </button>
+            </SignUpButton>
+            <SignInButton mode="modal">
+              <button className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
+                Sign In
+              </button>
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            <Link 
+              href="/dashboard"
+              className="rounded-full bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all"
+            >
+              Go to Dashboard
+            </Link>
+          </Show>
         </div>
 
         <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3 text-left">

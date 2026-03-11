@@ -1,9 +1,9 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 
-// Vercel's Neon integration populates neon__POSTGRES_URL for branch databases in Preview environments,
+// Vercel's Neon integration populates neon__POSTGRES_URL (or POSTGRES_URL) for branch databases in Preview environments,
 // defaulting to DATABASE_URL for Production. This ensures Dev changes do not affect Prod.
-const connectionString = process.env.neon__POSTGRES_URL || process.env.DATABASE_URL || '';
+const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
 
 if (!connectionString) {
   console.warn('DATABASE_URL (or neon__POSTGRES_URL) is not set; database operations will fail.');
