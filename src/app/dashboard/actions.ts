@@ -152,8 +152,16 @@ export async function createRule(formData: FormData) {
   const targetEmail = formData.get("targetEmail") as string || null;
   const keyIds = formData.getAll("keyIds") as string[];
 
+  console.log("[createRule] Received form data:", {
+    ruleName, service, actionType, regexPattern, targetEmail,
+    keyIds, allKeys: Array.from(formData.keys()),
+  });
+
   if (!ruleName || !service || !actionType || !regexPattern) {
-    throw new Error("Missing required fields");
+    console.error("[createRule] Missing required fields:", { ruleName, service, actionType, regexPattern });
+    // Don't throw — server action throws crash the entire page in Next.js
+    revalidatePath("/dashboard");
+    return;
   }
 
   const newRule = await db.insert(accessRules).values({
