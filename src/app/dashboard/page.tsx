@@ -1,8 +1,10 @@
-import { accessRules } from '@/db/schema';
+import { users, accessRules } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { db } from '@/db';
+import { RuleControls } from './RuleControls';
+import { DeleteRuleButton } from './DeleteRuleButton';
 
 export default async function DashboardPage() {
   const user = await currentUser();
@@ -11,26 +13,20 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  // Once the real DB is hooked up with credentials, this fetch will work dynamically:
-  // const userRules = await db.select().from(accessRules).where(eq(accessRules.userId, user.id));
-  
-  // For UI development, a mock state array mirroring the DB schema
-  const userRules = [
-    {
-      id: "rule-123",
-      ruleName: "Block Project X",
-      service: "gmail",
-      actionType: "read_blacklist",
-      regexPattern: "CONFIDENTIAL_PROJECT_X"
-    },
-    {
-      id: "rule-456",
-      ruleName: "Allow Core Domain",
-      service: "gmail",
-      actionType: "send_whitelist",
-      regexPattern: "*@trusted-domain.com"
-    }
-  ];
+  // Ensure user exists in our DB, since we aren't using Clerk webhooks yet
+  let dbUser = await db.select().from(users).where(eq(users.clerkUserId, user.id)).limit(1).then(res => res[0]);
+
+  if (!dbUser) {
+    const rawKeys = await db.insert(users).values({
+      clerkUserId: user.id,
+      email: user.emailAddresses[0]?.emailAddress ?? 'unknown',
+      proxyKey: `sk_proxy_${crypto.randomUUID().replace(/-/g, '')}`,
+    }).returning();
+    dbUser = rawKeys[0];
+  }
+
+  // Fetch real rules
+  const userRules = await db.select().from(accessRules).where(eq(accessRules.userId, dbUser.id));
 
   return (
     <div className="py-10">
@@ -48,14 +44,14 @@ export default async function DashboardPage() {
               <h2 className="text-lg font-medium leading-6 text-gray-900 mb-4">Your Proxy Credentials</h2>
               <div className="bg-slate-50 border border-slate-200 rounded-md p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-slate-500">API Key</p>
-                  <code className="text-slate-900 font-mono">sk_test_***************************</code>
+                  <p className="text-sm text-slate-800">API Key</p>
+                  <code className="text-slate-900 font-mono">{dbUser.proxyKey}</code>
                 </div>
                 <button className="bg-white border inset-ring inset-ring-gray-300 text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-50 text-gray-700">
-                  Manage Keys in WorkOS
+                  Roll Key (Coming Soon)
                 </button>
               </div>
-              <p className="mt-3 text-sm text-gray-500">
+              <p className="mt-3 text-sm text-gray-800">
                 Use this key as a Bearer token when communicating with the proxy endpoint.
               </p>
             </div>
@@ -63,14 +59,7 @@ export default async function DashboardPage() {
 
           <div className="mt-8 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Active Rules</h2>
-            <div className="flex gap-2">
-              <button className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-4 py-2 text-sm font-medium rounded-md">
-                + Quick Add 2FA Block
-              </button>
-              <button className="bg-blue-600 text-white hover:bg-blue-500 px-4 py-2 text-sm font-medium rounded-md">
-                Create Custom Rule
-              </button>
-            </div>
+            <RuleControls />
           </div>
 
           <div className="mt-4 flex flex-col">
@@ -95,26 +84,33 @@ export default async function DashboardPage() {
                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                             {rule.ruleName}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-800">
                             <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
                               {rule.service}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-800">
                             {rule.actionType === 'read_blacklist' ? (
                                <span className="text-red-600 font-medium">Read Blacklist</span>
                             ) : rule.actionType === 'send_whitelist' ? (
                                <span className="text-green-600 font-medium">Send Whitelist</span>
                             ) : rule.actionType}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-mono bg-slate-50 border rounded-sm ml-2 px-2">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-800 font-mono bg-slate-50 border rounded-sm ml-2 px-2">
                             {rule.regexPattern}
                           </td>
                           <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                            <button className="text-red-600 hover:text-red-900">Delete</button>
+                            <DeleteRuleButton id={rule.id} />
                           </td>
                         </tr>
                       ))}
+                      {userRules.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-sm text-gray-800">
+                            You have no active proxy rules. Default access to all Google Scopes is DENIED.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
