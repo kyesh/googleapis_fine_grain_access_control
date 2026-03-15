@@ -19,7 +19,7 @@ description: Merges the PR to main, waits for production deployment, and validat
 3.  Validate the production deployment:
     a. Check the latest deployment status on Vercel:
     ```bash
-    npx vercel ls googleapis-fine-grain-access-control --prod --limit 1
+    npx vercel ls googleapis-fine-grain-access-control --prod
     ```
     b. (Optional) precise status check if you have the deployment URL:
     ```bash
