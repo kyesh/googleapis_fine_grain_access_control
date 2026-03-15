@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { RuleControls } from './RuleControls';
 import { DeleteRuleButton } from './DeleteRuleButton';
+import { EditRuleButton } from './EditRuleButton';
 import { KeyControls } from './KeyControls';
 import { DelegateAccessButton } from './DelegateAccessButton';
 import { RevokeDelegationButton } from './RevokeDelegationButton';
@@ -249,7 +250,14 @@ export default async function DashboardPage() {
                             </div>
                           </td>
                           <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                            <DeleteRuleButton id={rule.id} />
+                            <div className="flex items-center justify-end gap-3">
+                              <EditRuleButton
+                                rule={rule}
+                                accessibleEmails={accessibleEmails.map(e => e.email)}
+                                activeKeys={activeKeys.map(k => ({ id: k.id, label: k.label }))}
+                              />
+                              <DeleteRuleButton id={rule.id} />
+                            </div>
                           </td>
                         </tr>
                       ))}
