@@ -246,6 +246,49 @@ export async function createRule(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function updateRule(formData: FormData) {
+  const dbUser = await getDbUser();
+  const ruleId = formData.get("ruleId") as string;
+  const ruleName = formData.get("ruleName") as string;
+  const service = formData.get("service") as string;
+  const actionType = formData.get("actionType") as string;
+  const regexPattern = formData.get("regexPattern") as string;
+  const targetEmail = formData.get("targetEmail") as string || null;
+  const keyIds = formData.getAll("keyIds") as string[];
+
+  if (!ruleId || !ruleName || !service || !actionType || !regexPattern) {
+    console.error("[updateRule] Missing required fields");
+    revalidatePath("/dashboard");
+    return;
+  }
+
+  // Verify ownership
+  const rule = await db.select().from(accessRules).where(eq(accessRules.id, ruleId)).limit(1).then(res => res[0]);
+  if (!rule || rule.userId !== dbUser.id) {
+    throw new Error("Unauthorized or Rule not found");
+  }
+
+  // Update the rule
+  await db.update(accessRules).set({
+    ruleName,
+    service,
+    actionType,
+    regexPattern,
+    targetEmail: targetEmail || null,
+  }).where(eq(accessRules.id, ruleId));
+
+  // Reconcile key assignments: remove old, add new
+  await db.delete(keyRuleAssignments).where(eq(keyRuleAssignments.accessRuleId, ruleId));
+  for (const keyId of keyIds) {
+    await db.insert(keyRuleAssignments).values({
+      proxyKeyId: keyId,
+      accessRuleId: ruleId,
+    });
+  }
+
+  revalidatePath("/dashboard");
+}
+
 export async function deleteRule(id: string) {
   const dbUser = await getDbUser();
 
