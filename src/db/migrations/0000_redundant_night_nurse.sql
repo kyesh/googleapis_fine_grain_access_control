@@ -1,4 +1,4 @@
-CREATE TABLE "access_rules" (
+CREATE TABLE IF NOT EXISTS "access_rules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"rule_name" text NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE "access_rules" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"clerk_user_id" text NOT NULL,
 	"email" text NOT NULL,
@@ -20,4 +20,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_proxy_key_unique" UNIQUE("proxy_key")
 );
 --> statement-breakpoint
-ALTER TABLE "access_rules" ADD CONSTRAINT "access_rules_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+DO $$ BEGIN
+  ALTER TABLE "access_rules" ADD CONSTRAINT "access_rules_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

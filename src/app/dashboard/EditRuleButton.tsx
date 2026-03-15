@@ -1,61 +1,64 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { applyRecommendedSecurityRules, createRule } from "./actions";
+import { updateRule } from "./actions";
+
+interface EditableRule {
+  id: string;
+  ruleName: string;
+  service: string;
+  actionType: string;
+  regexPattern: string;
+  targetEmail: string | null;
+  assignedKeyIds: string[];
+}
 
 interface ProxyKeyInfo {
   id: string;
   label: string;
 }
 
-export function RuleControls({
+export function EditRuleButton({
+  rule,
   accessibleEmails = [],
   activeKeys = [],
 }: {
+  rule: EditableRule;
   accessibleEmails?: string[];
   activeKeys?: ProxyKeyInfo[];
 }) {
   const [isPending, startTransition] = useTransition();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   async function onSubmit(formData: FormData) {
     startTransition(async () => {
-      await createRule(formData);
-      setIsModalOpen(false);
+      await updateRule(formData);
+      setIsOpen(false);
     });
   }
 
   return (
     <>
-      <div className="flex gap-2">
-        <button
-          onClick={() =>
-            startTransition(() => applyRecommendedSecurityRules())
-          }
-          disabled={isPending}
-          className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 transition-all border border-indigo-200"
-        >
-          {isPending ? "Applying..." : "+ Quick Add 2FA Block"}
-        </button>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white hover:bg-blue-500 px-4 py-2 text-sm font-medium rounded-md transition-all shadow-sm"
-        >
-          Create Custom Rule
-        </button>
-      </div>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="text-blue-600 hover:text-blue-900 text-sm font-medium transition-opacity"
+      >
+        Edit
+      </button>
 
-      {isModalOpen && (
+      {isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-slate-900 mb-1">
-              Create Custom Rule
+              Edit Rule
             </h3>
             <p className="text-sm text-slate-800 mb-5">
-              Define your fine-grained access regex pattern.
+              Update the rule&apos;s settings and key assignments.
             </p>
 
             <form action={onSubmit} className="flex flex-col gap-5">
+              <input type="hidden" name="ruleId" value={rule.id} />
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Rule Name
@@ -64,16 +67,18 @@ export function RuleControls({
                   type="text"
                   name="ruleName"
                   required
+                  defaultValue={rule.ruleName}
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                  placeholder="e.g. Block Project X"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Service
                 </label>
                 <select
                   name="service"
+                  defaultValue={rule.service}
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                 >
                   <option value="gmail">Gmail</option>
@@ -81,12 +86,14 @@ export function RuleControls({
                   <option value="calendar">Calendar (Coming Soon)</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Action Type
                 </label>
                 <select
                   name="actionType"
+                  defaultValue={rule.actionType}
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                 >
                   <option value="read_blacklist">
@@ -100,6 +107,7 @@ export function RuleControls({
                   </option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Regex Pattern
@@ -108,18 +116,18 @@ export function RuleControls({
                   type="text"
                   name="regexPattern"
                   required
+                  defaultValue={rule.regexPattern}
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                  placeholder="e.g. *@competitor.com"
                 />
               </div>
 
-              {/* Target Email Scope */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Apply to Email
                 </label>
                 <select
                   name="targetEmail"
+                  defaultValue={rule.targetEmail || ""}
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                 >
                   <option value="">All accessible emails</option>
@@ -129,13 +137,8 @@ export function RuleControls({
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-slate-500 mt-1">
-                  Leave as &quot;All&quot; for a rule that applies regardless of
-                  which email the agent accesses.
-                </p>
               </div>
 
-              {/* Key Assignment */}
               {activeKeys.length > 0 && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -151,6 +154,7 @@ export function RuleControls({
                           type="checkbox"
                           name="keyIds"
                           value={k.id}
+                          defaultChecked={rule.assignedKeyIds.includes(k.id)}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         {k.label}
@@ -167,7 +171,7 @@ export function RuleControls({
               <div className="mt-4 flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsOpen(false)}
                   className="px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-md transition-colors"
                 >
                   Cancel
@@ -177,7 +181,7 @@ export function RuleControls({
                   disabled={isPending}
                   className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md disabled:opacity-50 shadow-sm transition-colors"
                 >
-                  {isPending ? "Saving..." : "Save Rule"}
+                  {isPending ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

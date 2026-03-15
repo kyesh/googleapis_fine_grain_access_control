@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, accessRules } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, proxyKeys, emailDelegations, keyEmailAccess, accessRules, keyRuleAssignments } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { clerkClient } from '@clerk/nextjs/server';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -16,6 +16,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   return handleProxyRequest(request, await params);
 }
 
+/**
+ * Extract the Gmail userId from the API path.
+ * Gmail API paths look like: gmail/v1/users/{userId}/messages/...
+ * Returns the userId segment, or 'me' if not found.
+ */
+function extractGmailUserId(fullPath: string): string {
+  const match = fullPath.match(/gmail\/v1\/users\/([^/]+)/);
+  return match ? decodeURIComponent(match[1]) : 'me';
+}
+
 async function handleProxyRequest(request: NextRequest, params: { path: string[] }) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -23,87 +33,213 @@ async function handleProxyRequest(request: NextRequest, params: { path: string[]
       return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 });
     }
 
-    const proxyKey = authHeader.split(' ')[1];
+    const keyValue = authHeader.split(' ')[1];
     const fullPath = params.path.join('/');
-    
-    // 1. Authenticate Proxy Key
-    const dbUser = await db.select().from(users).where(eq(users.proxyKey, proxyKey)).limit(1).then(res => res[0]);
-    if (!dbUser) {
-       return NextResponse.json({ error: 'Invalid Proxy Key' }, { status: 401 });
+
+    // ─── 1. Authenticate Proxy Key ──────────────────────────────────────────
+    const dbKey = await db
+      .select()
+      .from(proxyKeys)
+      .where(eq(proxyKeys.key, keyValue))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (!dbKey) {
+      return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    // 2. Fetch User Rules
-    const userRules = await db.select().from(accessRules).where(eq(accessRules.userId, dbUser.id));
+    // Check revocation
+    if (dbKey.revokedAt) {
+      return NextResponse.json({ error: 'This API key has been revoked.' }, { status: 401 });
+    }
 
-    // 3. Evaluate Send / Outbound Rules
+    // Check expiration
+    if (dbKey.expiresAt && dbKey.expiresAt < new Date()) {
+      return NextResponse.json({ error: 'This API key has expired.' }, { status: 401 });
+    }
+
+    // Fetch the owning user (the delegate / key creator)
+    const dbUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, dbKey.userId))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found.' }, { status: 401 });
+    }
+
+    // ─── 2. Resolve Target Email ────────────────────────────────────────────
+    const gmailUserId = extractGmailUserId(fullPath);
+
+    // Resolve 'me' to the key owner's primary email, or use the specific email from the path
+    let targetEmail: string;
+    if (gmailUserId === 'me') {
+      targetEmail = dbUser.email;
+    } else {
+      targetEmail = gmailUserId;
+    }
+
+    // ─── 3. Check Key ↔ Email Access ────────────────────────────────────────
+    const emailAccess = await db
+      .select()
+      .from(keyEmailAccess)
+      .where(
+        and(
+          eq(keyEmailAccess.proxyKeyId, dbKey.id),
+          eq(keyEmailAccess.targetEmail, targetEmail.toLowerCase()),
+        )
+      )
+      .limit(1)
+      .then(res => res[0]);
+
+    // Also try case-insensitive match
+    const emailAccessFallback = emailAccess || await db
+      .select()
+      .from(keyEmailAccess)
+      .where(eq(keyEmailAccess.proxyKeyId, dbKey.id))
+      .then(rows => rows.find(r => r.targetEmail.toLowerCase() === targetEmail.toLowerCase()));
+
+    if (!emailAccessFallback) {
+      return NextResponse.json({
+        error: `This API key does not have access to '${targetEmail}'.`
+      }, { status: 403 });
+    }
+
+    // ─── 4. Load Applicable Rules ───────────────────────────────────────────
+    const allUserRules = await db
+      .select()
+      .from(accessRules)
+      .where(eq(accessRules.userId, dbUser.id));
+
+    const keyAssignments = await db
+      .select()
+      .from(keyRuleAssignments)
+      .where(eq(keyRuleAssignments.proxyKeyId, dbKey.id));
+
+    const assignedRuleIds = new Set(keyAssignments.map(a => a.accessRuleId));
+
+    const allAssignments = await db.select().from(keyRuleAssignments);
+    const rulesWithAssignments = new Set(allAssignments.map(a => a.accessRuleId));
+
+    const applicableRules = allUserRules.filter(rule => {
+      const isGlobal = !rulesWithAssignments.has(rule.id);
+      const isAssignedToThisKey = assignedRuleIds.has(rule.id);
+      const emailMatches = !rule.targetEmail ||
+        rule.targetEmail.toLowerCase() === targetEmail.toLowerCase();
+      return (isGlobal || isAssignedToThisKey) && emailMatches;
+    });
+
+    // ─── 5. Evaluate Send / Outbound Rules ──────────────────────────────────
     if (request.method === 'POST' && fullPath.includes('messages/send')) {
       const body = await request.clone().json().catch(() => ({}));
-      
+
       let toAddress = null;
       if (body.raw) {
-         try {
-           const decoded = Buffer.from(body.raw, 'base64url').toString('utf8');
-           const toMatch = decoded.match(/^To:\s*(.+)$/im);
-           if (toMatch) {
-             toAddress = toMatch[1].trim();
-           }
-         } catch {
-           // Ignore decode errors
-         }
+        try {
+          const decoded = Buffer.from(body.raw, 'base64url').toString('utf8');
+          const toMatch = decoded.match(/^To:\s*(.+)$/im);
+          if (toMatch) {
+            toAddress = toMatch[1].trim();
+          }
+        } catch {
+          // Ignore decode errors
+        }
       }
 
       if (toAddress) {
-        const sendRules = userRules.filter(r => r.service === 'gmail' && r.actionType === 'send_whitelist');
-        
+        const sendRules = applicableRules.filter(r => r.service === 'gmail' && r.actionType === 'send_whitelist');
+
         if (sendRules.length > 0) {
-           let isWhitelisted = false;
-           for (const rule of sendRules) {
-             const regexStr = rule.regexPattern.replace(/\*/g, '.*');
-             const regex = new RegExp(regexStr, 'i');
-             if (regex.test(toAddress)) {
-                isWhitelisted = true;
-                break;
-             }
-           }
-           if (!isWhitelisted) {
-             return NextResponse.json({ 
-               error: `Unauthorized email address. Please ask your user to add '${toAddress}' to the sending whitelist.` 
-             }, { status: 403 });
-           }
+          let isWhitelisted = false;
+          for (const rule of sendRules) {
+            const regexStr = rule.regexPattern.replace(/\*/g, '.*');
+            const regex = new RegExp(regexStr, 'i');
+            if (regex.test(toAddress)) {
+              isWhitelisted = true;
+              break;
+            }
+          }
+          if (!isWhitelisted) {
+            return NextResponse.json({
+              error: `Unauthorized email address. Please ask your user to add '${toAddress}' to the sending whitelist.`
+            }, { status: 403 });
+          }
         } else {
-           return NextResponse.json({ 
-             error: `Unauthorized email address. Please ask your user to add '${toAddress}' to the sending whitelist. Default access is DENIED.` 
-           }, { status: 403 });
+          return NextResponse.json({
+            error: `Unauthorized email address. Please ask your user to add '${toAddress}' to the sending whitelist. Default access is DENIED.`
+          }, { status: 403 });
         }
       }
     }
 
-    // 4. Evaluate Deletion Rules
+    // ─── 6. Evaluate Deletion Rules ─────────────────────────────────────────
     if (request.method === 'DELETE') {
       if (fullPath.includes('messages/trash') || fullPath.includes('emptyTrash')) {
-        return NextResponse.json({ 
-          error: "Action Denied: Global safeguard prevents permanent deletion of all emails." 
+        return NextResponse.json({
+          error: "Action Denied: Global safeguard prevents permanent deletion of all emails."
         }, { status: 403 });
       }
     }
 
-    // Phase 3: Fetch real Google access token from Clerk
-    // Resolving clerkClient in Clerk v6
-    const client = await clerkClient();
-    
-    const tokenResponse = await client.users.getUserOauthAccessToken(dbUser.clerkUserId, 'oauth_google');
-    const realGoogleToken = tokenResponse.data[0]?.token;
+    // ─── 7. Resolve the token owner's Clerk user ID ─────────────────────────
+    // If the target email is the key owner's own email, use their Clerk ID.
+    // If it's a delegated email, look up the email owner's Clerk ID.
+    let tokenOwnerClerkUserId: string;
 
-    if (!realGoogleToken) {
-       return NextResponse.json({ error: 'User has not linked a Google Account OR the token is expired.' }, { status: 403 });
+    if (targetEmail.toLowerCase() === dbUser.email.toLowerCase()) {
+      // Own email — use the key owner's token
+      tokenOwnerClerkUserId = dbUser.clerkUserId;
+    } else {
+      // Delegated email — find the email owner
+      const emailOwner = await db.select().from(users)
+        .where(eq(users.email, targetEmail))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (!emailOwner) {
+        return NextResponse.json({
+          error: `Email '${targetEmail}' owner not found in system.`
+        }, { status: 403 });
+      }
+
+      // Verify there's an active delegation
+      const delegation = await db.select().from(emailDelegations)
+        .where(and(
+          eq(emailDelegations.ownerUserId, emailOwner.id),
+          eq(emailDelegations.delegateUserId, dbUser.id),
+          eq(emailDelegations.status, 'active'),
+        ))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (!delegation) {
+        return NextResponse.json({
+          error: `Access to '${targetEmail}' has been revoked or is not delegated to you.`
+        }, { status: 403 });
+      }
+
+      tokenOwnerClerkUserId = emailOwner.clerkUserId;
     }
 
-    // Forward the request to Google
+    // ─── 8. Fetch Real Google Token from Clerk ──────────────────────────────
+    const client = await clerkClient();
+    const tokenResponse = await client.users.getUserOauthAccessToken(tokenOwnerClerkUserId, 'oauth_google');
+    const realGoogleToken = tokenResponse.data?.[0]?.token;
+
+    if (!realGoogleToken) {
+      return NextResponse.json({
+        error: `Could not fetch Google access token for '${targetEmail}'. The account owner may need to reconnect their Google account.`
+      }, { status: 403 });
+    }
+
+    // ─── 8. Forward to Google ───────────────────────────────────────────────
     const googleUrl = `https://www.googleapis.com/${fullPath}${request.nextUrl.search}`;
     const headers = new Headers(request.headers);
     headers.set('Authorization', `Bearer ${realGoogleToken}`);
     headers.delete('host');
-    
+
     let requestBody: ArrayBuffer | undefined = undefined;
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       requestBody = await request.clone().arrayBuffer();
@@ -118,19 +254,19 @@ async function handleProxyRequest(request: NextRequest, params: { path: string[]
     const returnBody = await googleResponse.text();
     const isJson = googleResponse.headers.get('content-type')?.includes('application/json');
 
-    // 5. Evaluate Read / Inbound Rules
+    // ─── 9. Evaluate Read / Inbound Rules ───────────────────────────────────
     if (request.method === 'GET' && fullPath.includes('messages') && isJson) {
-      const readBlacklistRules = userRules.filter(r => r.service === 'gmail' && r.actionType === 'read_blacklist');
-      
+      const readBlacklistRules = applicableRules.filter(r => r.service === 'gmail' && r.actionType === 'read_blacklist');
+
       if (readBlacklistRules.length > 0) {
         for (const rule of readBlacklistRules) {
-           const regexStr = rule.regexPattern.replace(/\*/g, '.*');
-           const regex = new RegExp(regexStr, 'i');
-           if (regex.test(returnBody)) {
-              return NextResponse.json({ 
-                error: `Access restricted: Email content blocked by rule '${rule.ruleName}'.` 
-              }, { status: 403 });
-           }
+          const regexStr = rule.regexPattern.replace(/\*/g, '.*');
+          const regex = new RegExp(regexStr, 'i');
+          if (regex.test(returnBody)) {
+            return NextResponse.json({
+              error: `Access restricted: Email content blocked by rule '${rule.ruleName}'.`
+            }, { status: 403 });
+          }
         }
       }
     }
