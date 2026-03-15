@@ -2,7 +2,29 @@ import { neon } from '@neondatabase/serverless';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
+import { execSync } from 'child_process';
+
+const getGitBranch = () => {
+  try {
+    return execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const gitBranch = getGitBranch();
+const isMainBranch = gitBranch === 'main';
+
+const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || '';
+
+if (!isMainBranch && connectionString.includes('.neon.tech')) {
+  if (!process.env.neon__POSTGRES_URL) {
+    console.error(`\n🚨 MIGRATE SAFETY ABORT: You are on branch '${gitBranch}' but 'neon__POSTGRES_URL' is missing.`);
+    console.error(`Continuing would cause the migration script to apply changes to the PRODUCTION database.`);
+    console.error(`Please run 'npm run db:branch' first to provision an isolated branch and update .env.local.\n`);
+    process.exit(1);
+  }
+}
 
 if (!connectionString) {
   console.log('⚠️  No database connection string found. Skipping migration.');
