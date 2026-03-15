@@ -21,7 +21,9 @@ const isMainBranch = gitBranch === 'main';
 
 const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || '';
 
-if (!isMainBranch && connectionString.includes('.neon.tech')) {
+const isCI = process.env.CI === '1' || process.env.VERCEL === '1';
+
+if (!isMainBranch && !isCI && connectionString.includes('.neon.tech')) {
   if (!process.env.neon__POSTGRES_URL) {
     console.log(`\n🌿 Branch '${gitBranch}' isolated connection missing. Auto-provisioning via neonctl...`);
     try {
