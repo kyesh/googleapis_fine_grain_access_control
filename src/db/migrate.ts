@@ -82,7 +82,7 @@ async function main() {
     for (let i = 0; i < statements.length; i++) {
       const stmt = statements[i];
       try {
-        await sql(stmt);
+        await sql.query(stmt);
       } catch (err: any) {
         // Ignore "already exists" errors for idempotent migrations
         if (err.message?.includes('already exists') || err.message?.includes('duplicate_object')) {
