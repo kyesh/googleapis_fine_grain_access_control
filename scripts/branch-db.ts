@@ -8,6 +8,14 @@ import path from 'path'
 // Load environment variables from .env.local
 config({ path: '.env.local' })
 
+// Prevent script from hanging indefinitely during API network drops
+setTimeout(() => {
+  console.error('\n🚨 FATAL TIMEOUT: The Neon API failed to respond within 30 seconds.');
+  console.error('This is likely due to an outbound network issue or restrictive proxy in the execution environment.');
+  console.error('Please run the `npx neonctl` equivalents or try again later. Aborting process.');
+  process.exit(1);
+}, 30000);
+
 const NEON_API_KEY = process.env.NEON_API_KEY
 
 if (!NEON_API_KEY) {
