@@ -14,21 +14,21 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-3">1. Introduction</h2>
             <p>
-              Welcome to SecureAgent ("we", "our", or "us"). We respect your privacy and are committed to protecting your personal data. 
-              SecureAgent is designed as a secure proxy that sits between your AI agents and your connected API services, enforcing security rules without unnecessarily storing your data.
+              Welcome to FGAC.ai ("we", "our", or "us"). We respect your privacy and are committed to protecting your personal data. 
+              FGAC.ai is designed as a secure proxy that sits between your AI agents and your connected API services, enforcing security rules without unnecessarily storing your data.
             </p>
           </section>
 
           <section className="bg-blue-50 p-6 rounded-xl border border-blue-100 my-8">
             <h2 className="text-xl font-bold text-blue-900 mb-3">2. Google API Services Limited Use Policy</h2>
             <p className="font-medium text-blue-800">
-              SecureAgent's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-800">Google API Services User Data Policy</a>, including the Limited Use requirements.
+              FGAC.ai's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-800">Google API Services User Data Policy</a>, including the Limited Use requirements.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-3">3. How We Access and Use Your Data</h2>
-            <p>When you connect your Google Workspace or Gmail account to SecureAgent, we request certain OAuth scopes (such as <code>gmail.readonly</code>, <code>gmail.send</code>, and <code>gmail.modify</code>). We use this access strictly to:</p>
+            <p>When you connect your Google Workspace or Gmail account to FGAC.ai, we request certain OAuth scopes (such as <code>gmail.readonly</code>, <code>gmail.send</code>, and <code>gmail.modify</code>). We use this access strictly to:</p>
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li>Proxy API requests made by your configured AI agents to the Gmail API.</li>
               <li>Apply your custom security rules (e.g., blocking reads of emails containing 2FA codes, or allowing sending only to whitelisted domains).</li>
@@ -55,7 +55,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-3">5. Deletion of Data</h2>
             <p>
-              You can revoke SecureAgent's access to your Google account at any time via your Google Account Security settings. If you delete your SecureAgent account, all associated API keys, defined security rules, access logs, and metadata will be permanently deleted from our databases.
+              You can revoke FGAC.ai's access to your Google account at any time via your Google Account Security settings. If you delete your FGAC.ai account, all associated API keys, defined security rules, access logs, and metadata will be permanently deleted from our databases.
             </p>
           </section>
 

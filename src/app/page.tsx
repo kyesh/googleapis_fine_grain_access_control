@@ -62,7 +62,7 @@ export default async function LandingPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">How We Use Google Data</h2>
           <div className="space-y-4 text-gray-800">
             <p>
-              SecureAgent requires access to your Gmail account (via scopes like <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.readonly</code>, <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.send</code>, and <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.modify</code>) to act as a secure proxy between your inbox and your AI agents.
+              FGAC.ai requires access to your Gmail account (via scopes like <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.readonly</code>, <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.send</code>, and <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-900 text-sm">gmail.modify</code>) to act as a secure proxy between your inbox and your AI agents.
             </p>
             <p>
               When your AI agent makes an API request, we strictly enforce your custom allowlists and blocklists before forwarding the exact request to the Google API. We never permanently store your email content, and your data is never used to train our AI models. No humans read your emails.
