@@ -15,11 +15,11 @@ export default async function LandingPage() {
         
         <div className="flex gap-4 justify-center pt-8">
           <Show when="signed-out">
-            <SignUpButton mode="modal">
+            <Link href="/waitlist">
               <button className="rounded-full bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all">
-                Get Started
+                Join Beta Waitlist
               </button>
-            </SignUpButton>
+            </Link>
             <SignInButton mode="modal">
               <button className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-all">
                 Sign In

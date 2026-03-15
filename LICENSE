@@ -10,7 +10,7 @@ sublicense copies of the Software for personal, non-commercial purposes only,
 subject to the following conditions:
 
 1. PERSONAL USE RESTRICTION: This Software may only be used by an individual 
-managing their own personal Google Workspace or Gmail accounts.
+managing their own personal Google Workspace or Gmail accounts on their local or personal servers.
 
 2. CORPORATE AND EDUCATIONAL RESTRICTION: Use of this Software by, or on behalf 
 of, any corporation, company, business entity, government agency, or educational 
@@ -18,7 +18,14 @@ institution (including by employees or students acting in such capacity) is
 EXPLICITLY PROHIBITED. For Enterprise or Educational licensing, you must contact 
 the author directly to negotiate separate terms.
 
-3. The above copyright notice and this permission notice shall be included in all 
+3. HOSTING AND SAAS RESTRICTION: You are EXPLICITLY PROHIBITED from offering this 
+Software as a managed service, hosted solution, API, SaaS (Software as a Service), 
+or any other third-party offering. This restriction includes deploying the proxy 
+infrastructure to provide access control services for other users' AI agents. All 
+commercial, white-label, or multi-tenant hosting applications of this codebase are 
+strictly forbidden.
+
+4. The above copyright notice and this permission notice shall be included in all 
 copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
