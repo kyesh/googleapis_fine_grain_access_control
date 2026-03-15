@@ -1,10 +1,43 @@
 import { neon } from '@neondatabase/serverless';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import * as dotenv from 'dotenv';
 
-const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
+import { execSync } from 'child_process';
 
-if (!connectionString) {
+const getGitBranch = () => {
+  try {
+    return execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const gitBranch = getGitBranch();
+const isMainBranch = gitBranch === 'main';
+
+const connectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || '';
+
+if (!isMainBranch && connectionString.includes('.neon.tech')) {
+  if (!process.env.neon__POSTGRES_URL) {
+    console.log(`\n🌿 Branch '${gitBranch}' isolated connection missing. Auto-provisioning via neonctl...`);
+    try {
+      execSync('npm run db:branch', { stdio: 'inherit' });
+      // Refresh process.env
+      dotenv.config({ path: '.env.local', override: true });
+      if (!process.env.neon__POSTGRES_URL) {
+        throw new Error('neon__POSTGRES_URL remaining missing');
+      }
+    } catch (e: unknown) {
+      console.error(`\n🚨 MIGRATE SAFETY ABORT: Auto-provisioning failed.`);
+      process.exit(1);
+    }
+  }
+}
+
+const finalConnectionString = process.env.neon__POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || '';
+
+if (!finalConnectionString) {
   console.log('⚠️  No database connection string found. Skipping migration.');
   process.exit(0);
 }
@@ -65,7 +98,7 @@ function splitStatements(sql: string): string[] {
 async function main() {
   console.log('🚀 Running database migrations...');
 
-  const sql = neon(connectionString);
+  const sql = neon(finalConnectionString);
   const migrationsDir = join(process.cwd(), 'src', 'db', 'migrations');
 
   for (const file of MIGRATIONS) {
