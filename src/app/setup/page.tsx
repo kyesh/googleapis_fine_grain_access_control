@@ -20,10 +20,10 @@ export default function SetupPage() {
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-gray-900 mb-6 animate-in slide-in-from-bottom-4 duration-700 ease-out">
             Connect Your Agents ⚡
           </h1>
-          <p className="mt-4 text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed animate-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both">
-            Give Claude, Open Claw, or custom Python scripts secure access to
-            your inbox in minutes. Protect your credentials with fine-grained
-            access control rules.
+          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            Get your AI agents up and running with Fine Grain Access Control to
+            your inbox in minutes. Protect your credentials with Fine Grain Access Control
+            security tokens.
           </p>
         </div>
       </div>

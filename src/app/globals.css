@@ -12,8 +12,10 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  --color-brand-blue: #0a468c;
-  --color-brand-orange: #e66e00;
+  --color-brand-purple: #4B2C7F;
+  --color-brand-gold: #D4AF37;
+  --color-brand-teal: #2D9B9B;
+  --color-brand-glow: #A0FFFF;
 }
 
 body {
