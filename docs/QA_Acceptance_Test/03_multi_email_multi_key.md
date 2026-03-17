@@ -13,6 +13,17 @@
 
 ---
 
+## 🔒 Vercel Preview Automation Bypass
+When executing the mock AI agent scripts against a **Vercel Preview URL**, Vercel's SSO Protection shields the API endpoints.
+
+**To test the API programmatically on a Preview Branch:**
+1. In the Vercel Dashboard, navigate to **Settings -> Deployment Protection**.
+2. Enable **Protection Bypass for Automation** and copy the generated secret token.
+3. Save this token as `VERCEL_AUTOMATION_BYPASS_SECRET` in your `.env.preview` file.
+4. Update your testing scripts (e.g. `scripts/test-preview-api.ts`) to include the `x-vercel-protection-bypass: YOUR_SECRET` HTTP header on all proxy requests. This securely tunnels the request directly to the Next.js API.
+
+---
+
 ## Test Cases
 
 ### 1. Connecting Multiple Google Accounts
