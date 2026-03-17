@@ -38,7 +38,7 @@ export default function RootLayout({
                     <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                       <Link
                         href="/setup"
-                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-800 hover:border-gray-400 hover:text-gray-900"
+                        className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-800 hover:border-brand-blue hover:text-brand-blue"
                       >
                         Setup Guide
                       </Link>
@@ -47,7 +47,7 @@ export default function RootLayout({
                       <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                         <Link
                           href="/dashboard"
-                          className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-800 hover:border-gray-400 hover:text-gray-900"
+                          className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-800 hover:border-brand-blue hover:text-brand-blue"
                         >
                           Dashboard
                         </Link>
@@ -57,7 +57,7 @@ export default function RootLayout({
                   <div className="flex items-center">
                     <Show when="signed-out">
                       <SignUpButton mode="modal">
-                        <button className="text-sm font-medium text-gray-800 hover:text-gray-900">Sign Up</button>
+                        <button className="text-sm font-medium text-gray-800 hover:text-brand-blue">Sign Up</button>
                       </SignUpButton>
                     </Show>
                     <Show when="signed-in">
