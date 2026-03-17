@@ -21,8 +21,8 @@
 **Steps**:
 1. Log into the Web UI as the test user.
 2. Navigate to Clerk `<UserProfile />` (e.g., via the user avatar menu).
-3. Under "Connected Accounts", click "Connect Account" and authenticate with `USER_A_EMAIL`.
-4. Repeat step 3 with `USER_B_EMAIL`.
+3. Under "Connected Accounts", click "Connect Account" and authenticate with `USER_A_EMAIL`. **NOTE for Browser Agents/QA**: The browser should already be signed into this Google account. Simply click the existing profile instead of typing a password.
+4. Repeat step 3 with `USER_B_EMAIL`, also selecting the pre-authenticated session.
 5. Return to the application dashboard.
 6. Verify that the "Connected Emails" section lists both `USER_A_EMAIL` and `USER_B_EMAIL`.
 
