@@ -19,7 +19,7 @@
 **Steps**:
 1. Navigate to the landing page in the testing environment.
 2. Click the "Sign Up" or "Get Started" button.
-3. Complete the Clerk sign-up flow using the account defined as `USER_A_EMAIL` in `.qa_test_emails.json`.
+3. Complete the Clerk sign-up flow. **NOTE for Browser Agents/QA**: Ensure the browser environment is already signed into the Google account defined as `USER_A_EMAIL` in `.qa_test_emails.json`. Select "Continue with Google" and pick the active session to bypass password/2FA prompts.
 4. During the Google OAuth consent screen, approve all requested scopes (e.g., Drive, Gmail, Calendar).
 5. Upon redirect back to the application dashboard, verify that a clear "Welcome" or onboarding state is shown.
 6. Locate the "Generate API Credentials" or "Proxy Setup" section.
