@@ -116,10 +116,10 @@ export default async function DashboardPage() {
 
                 {/* Delegated emails */}
                 {delegationsToMe.map(d => (
-                  <div key={d.delegation.id} className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-md px-3 py-2">
-                    <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                    <span className="text-sm font-medium text-indigo-900">{d.ownerEmail}</span>
-                    <span className="text-xs text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">Delegated</span>
+                  <div key={d.delegation.id} className="flex items-center gap-2 bg-brand-teal/5 border border-brand-teal/20 rounded-md px-3 py-2">
+                    <div className="w-2 h-2 rounded-full bg-brand-teal"></div>
+                    <span className="text-sm font-medium text-brand-teal">{d.ownerEmail}</span>
+                    <span className="text-xs text-brand-teal bg-brand-teal/10 px-1.5 py-0.5 rounded">Delegated</span>
                   </div>
                 ))}
               </div>

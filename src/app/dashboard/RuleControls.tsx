@@ -85,7 +85,7 @@ export function RuleControls({
               Create Custom Rule
             </h3>
             <p className="text-sm text-slate-800 mb-5">
-              Define your fine-grained access regex pattern.
+              Define your Fine Grain Access Control regex pattern.
             </p>
 
             <form action={onSubmit} className="flex flex-col gap-5">
