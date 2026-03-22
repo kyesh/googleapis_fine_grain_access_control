@@ -65,7 +65,10 @@ export default async function DashboardPage() {
   ];
 
   // ─── Determine if User has required Google Scopes ────────────────────────
-  const googleAccount = user.externalAccounts.find(acc => acc.provider === 'oauth_google' || acc.provider === 'google');
+  const googleAccount = user.externalAccounts.find(acc => 
+    (acc.provider === 'oauth_google' || acc.provider === 'google') &&
+    acc.verification?.status === 'verified'
+  );
   const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
   const hasCompleteGoogleAccess = googleAccount?.approvedScopes?.includes(REQUIRED_SCOPE) ?? false;
 
