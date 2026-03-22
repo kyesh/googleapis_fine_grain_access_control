@@ -1,9 +1,29 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { useState } from "react";
 
 export function ConnectGoogleWarning() {
-  const clerk = useClerk();
+  const { user } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConnect = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const response = await user.createExternalAccount({
+        strategy: "oauth_google",
+        redirectUrl: "/dashboard",
+      });
+
+      if (response.verification?.externalVerificationRedirectURL) {
+        window.location.href = response.verification.externalVerificationRedirectURL.href;
+      }
+    } catch (error) {
+      console.error("Failed to connect Google:", error);
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-md shadow-sm mb-6">
@@ -17,17 +37,18 @@ export function ConnectGoogleWarning() {
           <div className="ml-3">
             <h3 className="text-sm font-medium text-amber-800">Action Required: Connect Google Account</h3>
             <div className="mt-1 text-sm text-amber-700">
-              <p>You have not granted FGAC access to your Gmail or you are missing required permissions. Please open your Account Settings and connect your Google account to enable API access.</p>
+              <p>You have not granted FGAC access to your Gmail or you are missing required permissions. Please connect your Google account to enable API access.</p>
             </div>
           </div>
         </div>
         <div className="flex-shrink-0">
           <button
-            onClick={() => clerk.openUserProfile()}
+            onClick={handleConnect}
+            disabled={isLoading}
             type="button"
-            className="inline-flex items-center rounded-md bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors"
+            className="inline-flex items-center rounded-md bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:bg-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 transition-colors disabled:opacity-50"
           >
-            Open Account Settings
+            {isLoading ? "Connecting..." : "Sign in with Google"}
           </button>
         </div>
       </div>
