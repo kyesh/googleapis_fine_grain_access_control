@@ -24,6 +24,12 @@ export function ConnectGoogleWarning() {
         verificationUrl = response.verification?.externalVerificationRedirectURL?.href;
       } else {
         // If they never linked Google OR if it was disconnected (unverified), create a new connection
+        if (existingGoogleAccount) {
+          // Clean up the disconnected/unverified account before creating a new one
+          // Otherwise Clerk throws an error because the strategy already exists on their profile
+          await existingGoogleAccount.destroy();
+        }
+        
         const response = await user.createExternalAccount({
           strategy: "oauth_google",
           redirectUrl: window.location.href,
