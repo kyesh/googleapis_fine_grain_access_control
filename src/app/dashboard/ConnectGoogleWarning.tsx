@@ -16,8 +16,11 @@ export function ConnectGoogleWarning() {
       let verificationUrl: string | undefined;
 
       if (existingGoogleAccount) {
-        // If they have an account but missing scopes, FORCE reauthorization
-        const response = await existingGoogleAccount.reauthorize({ redirectUrl: window.location.href });
+        // If they have an account but missing scopes, FORCE reauthorization with explicit additional scopes
+        const response = await existingGoogleAccount.reauthorize({ 
+          additionalScopes: ['https://www.googleapis.com/auth/gmail.modify'],
+          redirectUrl: window.location.href 
+        });
         verificationUrl = response.verification?.externalVerificationRedirectURL?.href;
       } else {
         // If they never linked Google, create a new connection
