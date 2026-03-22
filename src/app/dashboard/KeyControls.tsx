@@ -8,6 +8,7 @@ interface AccessibleEmail {
   email: string;
   type: 'own' | 'delegated';
   delegationId?: string;
+  hasCompleteGoogleAccess?: boolean;
 }
 
 interface ProxyKey {
@@ -218,15 +219,17 @@ export function KeyControls({
                     {accessibleEmails.map((ae) => (
                       <label
                         key={ae.email}
-                        className="flex items-center gap-2 text-sm text-slate-800"
+                        className={`flex items-center gap-2 text-sm ${ae.type === 'own' && ae.hasCompleteGoogleAccess === false ? 'opacity-50 text-slate-500' : 'text-slate-800'}`}
+                        title={ae.type === 'own' && ae.hasCompleteGoogleAccess === false ? "Google Account not securely linked. Open Account Settings to grant access." : ""}
                       >
                         <input
                           type="checkbox"
                           name="emails"
                           value={ae.email}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          disabled={ae.type === 'own' && ae.hasCompleteGoogleAccess === false}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
-                        {ae.email}
+                        <span className={ae.type === 'own' && ae.hasCompleteGoogleAccess === false ? 'line-through' : ''}>{ae.email}</span>
                         {ae.type === 'delegated' && (
                           <span className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
                             Delegated
@@ -236,6 +239,11 @@ export function KeyControls({
                           <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
                             You
                           </span>
+                        )}
+                        {ae.type === 'own' && ae.hasCompleteGoogleAccess === false && (
+                           <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 ml-auto">
+                              Action Required: Connect Google
+                           </span>
                         )}
                       </label>
                     ))}

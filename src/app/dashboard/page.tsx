@@ -9,6 +9,7 @@ import { EditRuleButton } from './EditRuleButton';
 import { KeyControls } from './KeyControls';
 import { DelegateAccessButton } from './DelegateAccessButton';
 import { RevokeDelegationButton } from './RevokeDelegationButton';
+import { ConnectGoogleWarning } from './ConnectGoogleWarning';
 
 export default async function DashboardPage() {
   const user = await currentUser();
@@ -63,6 +64,16 @@ export default async function DashboardPage() {
     })),
   ];
 
+  // ─── Determine if User has required Google Scopes ────────────────────────
+  const googleAccount = user.externalAccounts.find(acc => acc.provider === 'oauth_google' || acc.provider === 'google');
+  const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
+  const hasCompleteGoogleAccess = googleAccount?.approvedScopes?.includes(REQUIRED_SCOPE) ?? false;
+
+  // We explicitly override the 'own' email access state
+  const accessibleEmailsWithGoogleStatus = accessibleEmails.map(ae => 
+    ae.type === 'own' ? { ...ae, hasCompleteGoogleAccess } : ae
+  );
+
   // ─── Fetch proxy keys and their email access ─────────────────────────────
   const userProxyKeys = await db.select().from(proxyKeys).where(eq(proxyKeys.userId, dbUser.id));
   const allKeyEmailAccess = await db.select().from(keyEmailAccess);
@@ -97,6 +108,8 @@ export default async function DashboardPage() {
 
       <main>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+          
+          {!hasCompleteGoogleAccess && <ConnectGoogleWarning />}
 
           {/* ─── Your Email & Delegated Emails ─────────────────────── */}
           <div className="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
@@ -108,10 +121,10 @@ export default async function DashboardPage() {
 
               <div className="flex flex-wrap gap-3">
                 {/* Own email — always present */}
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-medium text-green-900">{ownEmail}</span>
-                  <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">You</span>
+                <div className={`flex items-center gap-2 border rounded-md px-3 py-2 ${hasCompleteGoogleAccess ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+                  <div className={`w-2 h-2 rounded-full ${hasCompleteGoogleAccess ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span className={`text-sm font-medium ${hasCompleteGoogleAccess ? 'text-green-900' : 'text-gray-600 line-through'}`}>{ownEmail}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${hasCompleteGoogleAccess ? 'text-green-600 bg-green-100' : 'text-gray-500 bg-gray-200'}`}>You</span>
                 </div>
 
                 {/* Delegated emails */}
@@ -174,7 +187,7 @@ export default async function DashboardPage() {
           <div className="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
             <div className="px-4 py-5 sm:p-6">
               <KeyControls
-                accessibleEmails={accessibleEmails}
+                accessibleEmails={accessibleEmailsWithGoogleStatus}
                 existingKeys={keysWithAccess}
               />
               <p className="mt-3 text-sm text-gray-800">
@@ -188,7 +201,7 @@ export default async function DashboardPage() {
           <div className="mt-8 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Access Rules</h2>
             <RuleControls
-              accessibleEmails={accessibleEmails.map(e => e.email)}
+              accessibleEmails={accessibleEmailsWithGoogleStatus.map(e => e.email)}
               activeKeys={activeKeys.map(k => ({ id: k.id, label: k.label }))}
             />
           </div>
@@ -253,7 +266,7 @@ export default async function DashboardPage() {
                             <div className="flex items-center justify-end gap-3">
                               <EditRuleButton
                                 rule={rule}
-                                accessibleEmails={accessibleEmails.map(e => e.email)}
+                                accessibleEmails={accessibleEmailsWithGoogleStatus.map(e => e.email)}
                                 activeKeys={activeKeys.map(k => ({ id: k.id, label: k.label }))}
                               />
                               <DeleteRuleButton id={rule.id} />
